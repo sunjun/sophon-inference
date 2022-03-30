@@ -3,4 +3,6 @@
 .DS_Store
 cmake-build-debug/
 build/
+release/
+.clang-format
 
