@@ -13,6 +13,7 @@
 #include "face_recognition/face_detector.h"
 #include "face_recognition/face_extract.h"
 #include "face_recognition/face_landmark.h"
+#include "tj/yolov5s.h"
 
 struct TChannel : public bm::NoCopyable {
     int channel_id;
@@ -35,7 +36,6 @@ class OneCardInferApp {
     bm::VideoUIAppPtr m_guiReceiver;
     AppStatis &m_appStatis;
 
-    bm::BMNNContextPtr m_bmctx;
     bm::TimerQueuePtr m_timeQueue;
     int m_channel_start;
     int m_channel_num;
@@ -44,18 +44,17 @@ class OneCardInferApp {
     std::string m_output_url;
 
     std::vector<bm::BMInferencePipe<bm::FrameInfo2>> m_inferPipes;
-    std::vector<std::shared_ptr<bm::DetectorDelegate<bm::FrameInfo2>>> m_detectorDelegates;
-
+    std::vector<std::shared_ptr<bm::DetectorDelegate<bm::FrameBaseInfo, bm::FrameInfo>>> m_detectorDelegates;
     std::map<int, TChannelPtr> m_chans;
     std::vector<std::string> m_urls;
 
 public:
-    OneCardInferApp(AppStatis &statis, bm::VideoUIAppPtr gui, bm::TimerQueuePtr tq, bm::BMNNContextPtr ctx,
+    OneCardInferApp(AppStatis &statis, bm::VideoUIAppPtr gui, bm::TimerQueuePtr tq,
                     std::string &output_url, int start_index, int num, int skip = 0, int model_num = 1) :
         m_channel_num(num),
-        m_bmctx(ctx), m_appStatis(statis) {
+        m_appStatis(statis) {
         m_guiReceiver = gui;
-        m_dev_id = m_bmctx->dev_id();
+        m_dev_id = 0;
         m_timeQueue = tq;
         m_channel_start = start_index;
         m_output_url = output_url;
@@ -68,11 +67,12 @@ public:
         std::cout << cv::format("OneCardInfoApp (devid=%d) dtor", m_dev_id) << std::endl;
     }
 
-    void setDetectorDelegate(int model_idx, std::shared_ptr<bm::DetectorDelegate<bm::FrameInfo2>> delegate) {
+    void setDetectorDelegate(int model_idx, std::shared_ptr<bm::DetectorDelegate<bm::FrameBaseInfo, bm::FrameInfo>> delegate) {
         m_detectorDelegates[model_idx] = delegate;
     }
 
     void start(const std::vector<std::string> &vct_urls, Config &config);
+    void start(const std::string urls, Config &config);
 
     inline void loadConfig(bm::DetectorParam &param, Config &config) {
         SConcurrencyConfig cfg;

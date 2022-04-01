@@ -21,6 +21,8 @@ struct CameraModel {
     float confidence;
     float threshold;
     float nms_threshold;
+
+    int max_batch;
 };
 
 struct CameraConfig {
@@ -234,6 +236,10 @@ public:
             return true;
         }
         return false;
+    }
+
+    const std::vector<CameraConfig> &getCameraConfigs() {
+        return m_cameras;
     }
 };
 
