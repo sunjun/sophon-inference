@@ -37,6 +37,7 @@ class YoloV5 : public bm::DetectorDelegate<bm::FrameInfo2> {
     bm::BMNNContextPtr m_bmctx;
     bm::BMNNNetworkPtr m_bmnet;
     int m_net_h, m_net_w;
+    bool m_isLastDetector = false;
 
     // configuration
     float m_confThreshold = 0.5;
@@ -61,12 +62,15 @@ public:
     virtual int forward(std::vector<bm::FrameInfo2> &frame_info) override;
     virtual int postprocess(std::vector<bm::FrameInfo2> &frame_info) override;
 
+    void setLastDetector(bool isLast);
+
 private:
     float sigmoid(float x);
     int argmax(float *data, int dsize);
     static float get_aspect_scaled_ratio(int src_w, int src_h, int dst_w,
                                          int dst_h, bool *alignWidth);
     void NMS(bm::NetOutputObjects &dets, float nmsConfidence);
+    void free_fwds(std::vector<bm::NetForward> &ios);
 
     void extract_yolobox_cpu(bm::FrameInfo2 &frameInfo);
 };

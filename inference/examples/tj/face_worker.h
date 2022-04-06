@@ -61,7 +61,7 @@ public:
         m_output_url = output_url;
         m_inferPipes.resize(model_num);
         m_detectorDelegates.resize(model_num);
-        m_skipN = 0;
+        m_skipN = skip;
     }
 
     ~OneCardInferApp() {

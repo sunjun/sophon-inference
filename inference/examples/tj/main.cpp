@@ -115,6 +115,9 @@ int main(int argc, char *argv[]) {
 
             std::shared_ptr<YoloV5> detector = std::make_shared<YoloV5>(contextPtr, max_batch);
             // set detector delegator
+            if (j == modelNum - 1) {
+                detector->setLastDetector(true);
+            }
             appPtr->setDetectorDelegate(j, detector);
         }
 
