@@ -8,6 +8,7 @@ set(src_files main.cpp
         face_landmark.cpp
         face_extract.cpp
         face_worker.cpp
+        yolov5s.cpp
         )
 add_executable(facerecogintion_demo ${src_files})
 if (USE_QTGUI)

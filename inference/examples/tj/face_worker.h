@@ -10,10 +10,11 @@
 #include "stream_pusher.h"
 #include "configuration.h"
 
-#include "face_recognition/face_detector.h"
-#include "face_recognition/face_extract.h"
-#include "face_recognition/face_landmark.h"
+// #include "face_recognition/face_detector.h"
+// #include "face_recognition/face_extract.h"
+// #include "face_recognition/face_landmark.h"
 #include "tj/yolov5s.h"
+#include "face_common.h"
 
 struct TChannel : public bm::NoCopyable {
     int channel_id;
@@ -44,7 +45,7 @@ class OneCardInferApp {
     std::string m_output_url;
 
     std::vector<bm::BMInferencePipe<bm::FrameInfo2>> m_inferPipes;
-    std::vector<std::shared_ptr<bm::DetectorDelegate<bm::FrameBaseInfo, bm::FrameInfo>>> m_detectorDelegates;
+    std::vector<std::shared_ptr<bm::DetectorDelegate<bm::FrameInfo2>>> m_detectorDelegates;
     std::map<int, TChannelPtr> m_chans;
     std::vector<std::string> m_urls;
 
@@ -67,7 +68,7 @@ public:
         std::cout << cv::format("OneCardInfoApp (devid=%d) dtor", m_dev_id) << std::endl;
     }
 
-    void setDetectorDelegate(int model_idx, std::shared_ptr<bm::DetectorDelegate<bm::FrameBaseInfo, bm::FrameInfo>> delegate) {
+    void setDetectorDelegate(int model_idx, std::shared_ptr<bm::DetectorDelegate<bm::FrameInfo2>> delegate) {
         m_detectorDelegates[model_idx] = delegate;
     }
 

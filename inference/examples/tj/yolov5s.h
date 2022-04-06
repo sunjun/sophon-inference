@@ -3,9 +3,10 @@
 //
 
 #include "bmutility.h"
-#include "inference.h"
+#include "inference2.h"
 #include "opencv2/opencv.hpp"
 #include <sys/time.h>
+#include "face_common.h"
 
 /*
 struct FrameBaseInfo {
@@ -31,7 +32,7 @@ struct FrameInfo {
 };
  */
 
-class YoloV5 : public bm::DetectorDelegate<bm::FrameBaseInfo, bm::FrameInfo> {
+class YoloV5 : public bm::DetectorDelegate<bm::FrameInfo2> {
     int MAX_BATCH = 1;
     bm::BMNNContextPtr m_bmctx;
     bm::BMNNNetworkPtr m_bmnet;
@@ -56,10 +57,9 @@ public:
     YoloV5(bm::BMNNContextPtr bmctx, int max_batch = 1);
     ~YoloV5();
 
-    virtual int preprocess(std::vector<bm::FrameBaseInfo> &frames,
-                           std::vector<bm::FrameInfo> &frame_info) override;
-    virtual int forward(std::vector<bm::FrameInfo> &frame_info) override;
-    virtual int postprocess(std::vector<bm::FrameInfo> &frame_info) override;
+    virtual int preprocess(std::vector<bm::FrameInfo2> &frames) override;
+    virtual int forward(std::vector<bm::FrameInfo2> &frame_info) override;
+    virtual int postprocess(std::vector<bm::FrameInfo2> &frame_info) override;
 
 private:
     float sigmoid(float x);
@@ -68,5 +68,5 @@ private:
                                          int dst_h, bool *alignWidth);
     void NMS(bm::NetOutputObjects &dets, float nmsConfidence);
 
-    void extract_yolobox_cpu(bm::FrameInfo &frameInfo);
+    void extract_yolobox_cpu(bm::FrameInfo2 &frameInfo);
 };
