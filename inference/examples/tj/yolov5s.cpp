@@ -300,39 +300,41 @@ void YoloV5::extract_yolobox_cpu(bm::FrameInfo2 &frameInfo) {
         int output_num = m_bmnet->outputTensorNum();
         int nout = m_class_num + 5;
 
-        // for (int tidx = 0; tidx < output_num; ++tidx) {
-        //     bm::BMNNTensor output_tensor(m_bmctx->handle(), "", 1.0, &frameInfo.output_tensors[tidx]);
-        //     int feat_h = output_tensor.get_shape()->dims[2];
-        //     int feat_w = output_tensor.get_shape()->dims[3];
-        //     int area = feat_h * feat_w;
-        //     float *output_data = (float *)output_tensor.get_cpu_data() + batch_idx * 3 * area * nout;
-        //     for (int anchor_idx = 0; anchor_idx < m_anchor_num; anchor_idx++) {
-        //         int feature_size = feat_h * feat_w * nout;
-        //         float *ptr = output_data + anchor_idx * feature_size;
-        //         for (int i = 0; i < area; i++) {
-        //             float score = sigmoid(ptr[4]);
-        //             if (score > m_objThreshold) {
-        //                 float centerX = (sigmoid(ptr[0]) * 2 - 0.5 + i % feat_w) * frame_width / feat_w;
-        //                 float centerY = (sigmoid(ptr[1]) * 2 - 0.5 + i / feat_h) * frame_height / feat_h;                       // center_y
-        //                 float width = pow((sigmoid(ptr[2]) * 2), 2) * m_anchors[tidx][anchor_idx][0] * frame_width / m_net_w;   // w
-        //                 float height = pow((sigmoid(ptr[3]) * 2), 2) * m_anchors[tidx][anchor_idx][1] * frame_height / m_net_h; // h
-        //                 bm::NetOutputObject box;
-        //                 box.x1 = int(centerX - width / 2);
-        //                 box.y1 = int(centerY - height / 2);
-        //                 box.x2 = box.x1 + width;
-        //                 box.y2 = box.y1 + height;
-        //                 int class_id = argmax(&ptr[5], m_class_num);
-        //                 box.score = sigmoid(ptr[class_id + 5]) * score;
-        //                 box.class_id = class_id;
+        for (int fwd_idx = 0; fwd_idx < frameInfo.forwards.size(); ++fwd_idx) {
+            for (int tidx = 0; tidx < output_num; ++tidx) {
+                bm::BMNNTensor output_tensor(m_bmctx->handle(), "", 1.0, &frameInfo.forwards[fwd_idx].output_tensors[tidx]);
+                int feat_h = output_tensor.get_shape()->dims[2];
+                int feat_w = output_tensor.get_shape()->dims[3];
+                int area = feat_h * feat_w;
+                float *output_data = (float *)output_tensor.get_cpu_data() + batch_idx * 3 * area * nout;
+                for (int anchor_idx = 0; anchor_idx < m_anchor_num; anchor_idx++) {
+                    int feature_size = feat_h * feat_w * nout;
+                    float *ptr = output_data + anchor_idx * feature_size;
+                    for (int i = 0; i < area; i++) {
+                        float score = sigmoid(ptr[4]);
+                        if (score > m_objThreshold) {
+                            float centerX = (sigmoid(ptr[0]) * 2 - 0.5 + i % feat_w) * frame_width / feat_w;
+                            float centerY = (sigmoid(ptr[1]) * 2 - 0.5 + i / feat_h) * frame_height / feat_h;                       // center_y
+                            float width = pow((sigmoid(ptr[2]) * 2), 2) * m_anchors[tidx][anchor_idx][0] * frame_width / m_net_w;   // w
+                            float height = pow((sigmoid(ptr[3]) * 2), 2) * m_anchors[tidx][anchor_idx][1] * frame_height / m_net_h; // h
+                            bm::NetOutputObject box;
+                            box.x1 = int(centerX - width / 2);
+                            box.y1 = int(centerY - height / 2);
+                            box.x2 = box.x1 + width;
+                            box.y2 = box.y1 + height;
+                            int class_id = argmax(&ptr[5], m_class_num);
+                            box.score = sigmoid(ptr[class_id + 5]) * score;
+                            box.class_id = class_id;
 
-        //                 if (box.score >= m_confThreshold) {
-        //                     yolobox_vec.push_back(box);
-        //                 }
-        //             }
-        //             ptr += (m_class_num + 5);
-        //         }
-        //     }
-        // } // end of tidx
+                            if (box.score >= m_confThreshold) {
+                                yolobox_vec.push_back(box);
+                            }
+                        }
+                        ptr += (m_class_num + 5);
+                    }
+                }
+            } // end of tidx
+        }
 
         NMS(yolobox_vec, m_nmsThreshold);
         bm::NetOutputDatum datum(yolobox_vec);
