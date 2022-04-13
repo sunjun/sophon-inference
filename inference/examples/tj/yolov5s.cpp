@@ -48,6 +48,9 @@ int YoloV5::preprocess(std::vector<bm::FrameInfo2> &frame_infos) {
                 num = left;
             }
 
+            // std::cout << "yolov5 MAX_BATCH == " << MAX_BATCH << std::endl;
+            // std::cout << "yolov5 num == " << num << std::endl;
+
             // bm::FrameInfo2 finfo;
             // 1. Resize
             bm_image resized_imgs[MAX_BATCH];
@@ -136,10 +139,10 @@ int YoloV5::forward(std::vector<bm::FrameInfo2> &frame_infos) {
     int ret = 0;
     for (int b = 0; b < frame_infos.size(); ++b) {
         for (auto &fwd : frame_infos[b].forwards) {
-            for (int i = 0; i < m_bmnet->outputTensorNum(); ++i) {
-                bm_tensor_t tensor;
-                fwd.output_tensors.push_back(tensor);
-            }
+            // for (int i = 0; i < m_bmnet->outputTensorNum(); ++i) {
+            //     bm_tensor_t tensor;
+            //     fwd.output_tensors.push_back(tensor);
+            // }
 
 #if DUMP_FILE
             bm::BMImage::dump_dev_memory(bmctx_->handle(), frame_infos[b].input_tensors[0].device_mem, "convertto",
@@ -173,6 +176,17 @@ int YoloV5::postprocess(std::vector<bm::FrameInfo2> &frame_infos) {
 
         // extract face detection
         extract_yolobox_cpu(frame_info);
+        for (int i = 0; i < frame_info.out_datums.size(); i++) {
+            bm::NetOutputDatum out = frame_info.out_datums[i];
+
+            for (int i = 0; i < out.obj_rects.size(); i++) {
+                bm::NetOutputObject obj = out.obj_rects[i];
+                std::cout << "width:" << obj.width();
+                std::cout << " height:" << obj.height();
+                std::cout << " score:" << obj.score;
+                std::cout << " class_id:" << obj.class_id << std::endl;
+            }
+        }
 
         // free input and output tensors
         free_fwds(frame_info.forwards);

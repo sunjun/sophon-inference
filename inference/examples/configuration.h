@@ -28,6 +28,8 @@ struct CameraModel {
 struct CameraConfig {
     std::string url;
     int skip_frames;
+    std::string channel_id;
+    std::string redis_topic;
     std::vector<CameraModel> models;
 };
 
@@ -145,6 +147,7 @@ class Config {
                 printf("devid error, devid=%d\n", devid);
                 return;
             }
+            std::string redisTopic = jsonCard["redis_topic"].asString();
 
             int camera_num = jsonCard["cameras"].size();
             Json::Value jsonCameras = jsonCard["cameras"];
@@ -155,6 +158,8 @@ class Config {
                 CameraConfig camera_config;
                 camera_config.url = json_url_info["address"].asString();
                 camera_config.skip_frames = json_url_info["skip_frames"].asInt();
+                camera_config.channel_id = json_url_info["channel_id"].asString();
+                camera_config.redis_topic = redisTopic;
 
                 Json::Value cameraModels = json_url_info["models"];
                 int models_num = json_url_info["models"].size();
@@ -167,6 +172,7 @@ class Config {
                     camera_model.nms_threshold = model_info["nms_threshold"].asFloat();
                     camera_model.name = model_info["name"].asString();
                     camera_model.path = model_info["path"].asString();
+                    camera_model.max_batch = model_info["max_batch"].asInt();
                     camera_config.models.push_back(camera_model);
                 }
                 vctCameraConfig.push_back(camera_config);

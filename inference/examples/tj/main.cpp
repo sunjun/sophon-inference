@@ -91,10 +91,23 @@ int main(int argc, char *argv[]) {
         int modelNum = cConfig.models.size();
         int skipFrames = cConfig.skip_frames;
 
+        std::cout << cConfig.models.size() << std::endl;
+        std::cout << cConfig.skip_frames << std::endl;
+        std::cout << cConfig.url << std::endl;
+        std::cout << cConfig.channel_id << std::endl;
+        std::cout << cConfig.redis_topic << std::endl;
+
         OneCardInferAppPtr appPtr = std::make_shared<OneCardInferApp>(appStatis, gui,
                                                                       tqp, output_url,
                                                                       start_chan_index, 1, skipFrames, modelNum);
         for (int j = 0; j < modelNum; ++j) {
+            std::cout << cConfig.models[j].name << std::endl;
+            std::cout << cConfig.models[j].path << std::endl;
+            std::cout << cConfig.models[j].confidence << std::endl;
+            std::cout << cConfig.models[j].threshold << std::endl;
+            std::cout << cConfig.models[j].nms_threshold << std::endl;
+            std::cout << cConfig.models[j].max_batch << std::endl;
+
             bm::BMNNContextPtr contextPtr = nullptr;
             std::map<std::string, bm::BMNNContextPtr>::iterator iter;
             iter = modelMap.find(cConfig.models[j].path);
