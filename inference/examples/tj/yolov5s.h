@@ -63,6 +63,7 @@ public:
     virtual int postprocess(std::vector<bm::FrameInfo2> &frame_info) override;
 
     void setLastDetector(bool isLast);
+    std::string detectorName;
 
 private:
     float sigmoid(float x);

@@ -127,8 +127,14 @@ int main(int argc, char *argv[]) {
             max_batch = cConfig.models[j].max_batch;
 
             std::shared_ptr<YoloV5> detector = std::make_shared<YoloV5>(contextPtr, max_batch);
+            detector->detectorName = cConfig.models[j].name;
+            std::cout << "here detectorName" << std::endl;
+            std::cout << detector->detectorName << std::endl;
             // set detector delegator
             if (j == modelNum - 1) {
+                std::cout << "detector->setLastDetector true" << std::endl;
+                std::cout << j << std::endl;
+                std::cout << modelNum << std::endl;
                 detector->setLastDetector(true);
             }
             appPtr->setDetectorDelegate(j, detector);

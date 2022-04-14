@@ -164,8 +164,10 @@ class Config {
                 Json::Value cameraModels = json_url_info["models"];
                 int models_num = json_url_info["models"].size();
 
+                // std::cout << "load config models_num" << std::endl;
+                // std::cout << models_num << std::endl;
                 for (int j = 0; j < models_num; ++j) {
-                    auto model_info = cameraModels[i];
+                    auto model_info = cameraModels[j];
                     CameraModel camera_model;
                     camera_model.confidence = model_info["confidence"].asFloat();
                     camera_model.threshold = model_info["threshold"].asFloat();
@@ -173,6 +175,13 @@ class Config {
                     camera_model.name = model_info["name"].asString();
                     camera_model.path = model_info["path"].asString();
                     camera_model.max_batch = model_info["max_batch"].asInt();
+
+                    // std::cout << "load config" << std::endl;
+                    // std::cout << camera_model.path << std::endl;
+                    // std::cout << camera_model.confidence << std::endl;
+                    // std::cout << camera_model.threshold << std::endl;
+                    // std::cout << camera_model.name << std::endl;
+                    // std::cout << camera_model.nms_threshold << std::endl;
                     camera_config.models.push_back(camera_model);
                 }
                 vctCameraConfig.push_back(camera_config);

@@ -29,6 +29,8 @@ void YoloV5::setLastDetector(bool isLast) {
 int YoloV5::preprocess(std::vector<bm::FrameInfo2> &frame_infos) {
     int ret = 0;
     bm_handle_t handle = m_bmctx->handle();
+    std::cout << "YoloV5::preprocess called" << std::endl;
+    std::cout << this->detectorName << std::endl;
 
     for (int frameInfoIdx = 0; frameInfoIdx < frame_infos.size(); ++frameInfoIdx) {
         auto &frame_info = frame_infos[frameInfoIdx];
@@ -72,8 +74,8 @@ int YoloV5::preprocess(std::vector<bm::FrameInfo2> &frame_infos) {
                 frame_info.frames[start_idx + i].jpeg_data = std::make_shared<bm::Data>(jpeg_data, out_size);
                 frame_info.frames[start_idx + i].height = image1.height;
                 frame_info.frames[start_idx + i].width = image1.width;
-                av_frame_unref(frame_info.frames[start_idx + i].avframe);
-                av_frame_free(&frame_info.frames[start_idx + i].avframe);
+                // av_frame_unref(frame_info.frames[start_idx + i].avframe);
+                // av_frame_free(&frame_info.frames[start_idx + i].avframe);
 
                 // finfo.frames.push_back(frame_info.frames[start_idx + i]);
                 bm_image_destroy(image1);
@@ -188,26 +190,36 @@ int YoloV5::postprocess(std::vector<bm::FrameInfo2> &frame_infos) {
             }
         }
 
+        std::cout << "this->detectorName" << std::endl;
+        std::cout << this->detectorName << std::endl;
+        std::cout << "free_fwds" << std::endl;
         // free input and output tensors
         free_fwds(frame_info.forwards);
         frame_info.forwards.clear();
 
+        std::cout << "m_pfnDetectFinish" << std::endl;
         if (m_pfnDetectFinish != nullptr) {
             m_pfnDetectFinish(frame_info);
         }
 
+        std::cout << "m_nextInferPipe" << std::endl;
         if (m_nextInferPipe) {
+            std::cout << "m_nextInferPipe push_frame" << std::endl;
             m_nextInferPipe->push_frame(&frame_info);
         }
 
+        std::cout << "m_nextInferPipe 111" << std::endl;
         if (m_isLastDetector) {
+            std::cout << "m_isLastDetector this->detectorName" << std::endl;
+            std::cout << "=============================================" << std::endl;
+            std::cout << this->detectorName << std::endl;
             for (int j = 0; j < frame_info.frames.size(); ++j) {
                 auto reff = frame_info.frames[j];
                 assert(reff.avpkt != nullptr);
                 av_packet_unref(reff.avpkt);
                 av_packet_free(&reff.avpkt);
 
-                assert(reff.avframe == nullptr);
+                // assert(reff.avframe == nullptr);
                 av_frame_unref(reff.avframe);
                 av_frame_free(&reff.avframe);
             }
