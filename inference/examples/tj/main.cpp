@@ -8,6 +8,8 @@
 #include "bmutility_timer.h"
 #include <iomanip>
 #include <map>
+#include "hiredis/hiredis.h"
+redisContext *global_redis = nullptr;
 
 int main(int argc, char *argv[]) {
     const char *keys = "{help | 0 | Print help info}"
@@ -22,6 +24,21 @@ int main(int argc, char *argv[]) {
         parser.printMessage();
         return 0;
     }
+    global_redis = redisConnect("127.0.0.1", 6379);
+    if (global_redis == NULL || global_redis->err) {
+        if (global_redis) {
+            printf("Error: %s\n", global_redis->errstr);
+            // handle error
+        } else {
+            printf("Can't allocate redis context\n");
+        }
+        return 0;
+    }
+    std::cout << "redisConnect global_redis " << &global_redis << std::endl;
+    /* PUBLISH a key */
+    // redisReply *reply = (redisReply *)redisCommand(global_redis, "PUBLISH %s %s", "mychannel", "h3333 world", 3);
+    // printf("PUBLISH: %s\n", reply->str);
+    // freeReplyObject(reply);
 
     std::map<std::string, bm::BMNNContextPtr> modelMap;
 
@@ -127,7 +144,12 @@ int main(int argc, char *argv[]) {
             max_batch = cConfig.models[j].max_batch;
 
             std::shared_ptr<YoloV5> detector = std::make_shared<YoloV5>(contextPtr, max_batch);
+
+            detector->setConfidence(cConfig.models[j].confidence, cConfig.models[j].threshold, cConfig.models[j].nms_threshold);
             detector->detectorName = cConfig.models[j].name;
+            detector->channelId = cConfig.channel_id;
+            detector->redisTopic = cConfig.redis_topic;
+
             std::cout << "here detectorName" << std::endl;
             std::cout << detector->detectorName << std::endl;
             // set detector delegator

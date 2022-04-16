@@ -3,6 +3,11 @@
 //
 
 #include "yolov5s.h"
+#include "hiredis/hiredis.h"
+
+int MAX_REDIS_LEN = 1024 * 1024 * 10;
+int MAX_JSON_LEN = 1024 * 10;
+extern redisContext *global_redis;
 
 YoloV5::YoloV5(bm::BMNNContextPtr bmctx, int max_batch) :
     m_bmctx(bmctx), MAX_BATCH(max_batch) {
@@ -172,7 +177,15 @@ void YoloV5::free_fwds(std::vector<bm::NetForward> &NetIOs) {
 }
 
 int YoloV5::postprocess(std::vector<bm::FrameInfo2> &frame_infos) {
+    char *redis_buf = (char *)malloc(MAX_REDIS_LEN);
+    char *json = (char *)malloc(MAX_JSON_LEN);
+    char *listJson = (char *)malloc(MAX_JSON_LEN);
     for (int i = 0; i < frame_infos.size(); ++i) {
+        memset(redis_buf, 0, MAX_REDIS_LEN);
+        memset(json, 0, MAX_JSON_LEN);
+        memset(listJson, 0, MAX_JSON_LEN);
+        sprintf(listJson, "{\"StreamID\":\"%s\",\"list\":[", this->channelId.data());
+
         // Free AVFrames
         auto frame_info = frame_infos[i];
 
@@ -183,36 +196,115 @@ int YoloV5::postprocess(std::vector<bm::FrameInfo2> &frame_infos) {
 
             for (int i = 0; i < out.obj_rects.size(); i++) {
                 bm::NetOutputObject obj = out.obj_rects[i];
-                std::cout << "width:" << obj.width();
+                std::cout << this->detectorName << "width:" << obj.width();
                 std::cout << " height:" << obj.height();
                 std::cout << " score:" << obj.score;
                 std::cout << " class_id:" << obj.class_id << std::endl;
+                std::string labelName = get_label(obj.class_id);
+                sprintf(listJson, "%s{\"x1\":%f,\"y1\":%f,\"x2\":%f,\"y2\":%f,\"class\":\"%s\", \"confidence\":%f,\"track_id\":%d}",
+                        listJson, obj.x1, obj.y1, obj.x2, obj.y2, labelName.data(), obj.score, 0);
+                if (i != out.obj_rects.size() - 1) {
+                    sprintf(listJson, "%s,", listJson);
+                }
             }
+            sprintf(listJson, "%s]}", listJson);
         }
 
-        std::cout << "this->detectorName" << std::endl;
-        std::cout << this->detectorName << std::endl;
-        std::cout << "free_fwds" << std::endl;
+        for (int i = 0; i < frame_info.frames.size(); i++) {
+            bm::FrameBaseInfo2 frame = frame_info.frames[i];
+            struct timeval tv;
+            gettimeofday(&tv, NULL);
+            int64_t curentTimeMs = tv.tv_sec * 1000 + tv.tv_usec / 1000;
+
+            std::cout << "frame.avframe " << i << std::endl;
+            std::cout << "frame.avframe format " << frame.avframe->format << std::endl;
+            std::cout << "frame.avframe format " << AV_PIX_FMT_NV12 << std::endl;
+            int32_t yuvSize = 0;
+            int32_t ySize = 0;
+            int32_t uSize = 0;
+            int32_t vSize = 0;
+            int32_t uvSize = 0;
+            int height = frame.avframe->height;
+            int width = frame.avframe->width;
+            // width = 1;
+            if (frame.avframe->format == AV_PIX_FMT_NV12) {
+                ySize = frame.avframe->linesize[0];
+                uvSize = frame.avframe->linesize[1];
+                vSize = frame.avframe->linesize[2];
+                // uvSize = uvSize / 2;
+                yuvSize = ySize * height + uvSize * height / 2;
+                sprintf(json, "{\"Long_j\":%d,\"width\":%d,\"height\":%d,\"timestamp\":%ld,\"json\":%s,\"long_p\":%d}", strlen(listJson), frame.avframe->width,
+                        frame.avframe->height, curentTimeMs, listJson, yuvSize);
+
+                printf("json %s\n", json);
+                int jsonLen = strlen(json);
+                int sizeInt = sizeof(int);
+
+                int *redis_buf_int = (int *)redis_buf;
+                *redis_buf_int = jsonLen;
+                memcpy(redis_buf + sizeInt, json, jsonLen);
+
+                printf("redis jsonLen, sizeInt, yuvSize %d %d %d\n", jsonLen, sizeInt, yuvSize);
+                printf("ySize %d, uvSize %d vsize %d\n", ySize, uvSize, vSize);
+                // copy y data
+                memcpy(redis_buf + sizeInt + jsonLen, frame.avframe->data[0], ySize * height);
+                // copy uv data
+                memcpy(redis_buf + sizeInt + jsonLen + ySize * height, frame.avframe->data[1], uvSize * height / 2);
+                redisReply *reply = (redisReply *)redisCommand(global_redis, "PUBLISH %s %b ", redisTopic.data(), redis_buf, sizeInt + jsonLen + yuvSize);
+                printf("redis send %d %s %d\n", reply->type, reply->str, reply->integer);
+                freeReplyObject(reply);
+                char name[100] = "";
+                sprintf(name, "%ld_bgr.wb", curentTimeMs);
+                FILE *fd = fopen(name, "wb");
+
+                if (fd == NULL) {
+                    perror("open failed!");
+                    exit(1);
+                }
+
+                fwrite(redis_buf + sizeInt + jsonLen, yuvSize, 1, fd);
+                fclose(fd);
+
+                // cv::Mat BGR;
+                // cv::Mat NV12 = cv::Mat(height * 3 / 2, width, CV_8UC1, redis_buf + sizeInt + jsonLen);
+
+                // cv::cvtColor(NV12, BGR, 99);
+                // cv::imwrite(name, BGR);
+
+                // std::cout << "this->detectorName redis topic " << redisTopic << std::endl;
+                // std::cout << "this->detectorName redis global_redis " << &global_redis << std::endl;
+                // redisReply *reply = (redisReply *)redisCommand(global_redis, "PUBLISH %s %s ", redisTopic, redis_buf, sizeInt + jsonLen);
+                // redisReply *reply = (redisReply *)redisCommand(global_redis, "PUBLISH %s %s", "mychannel", "h3333 world", 3);
+
+                // redisReply *reply = (redisReply *)redisCommand(global_redis, "PUBLISH %s %s ", redisTopic.data(), "hellllllllllll", 10);
+            }
+
+            break;
+        }
+
+        // std::cout << "this->detectorName" << std::endl;
+        // std::cout << this->detectorName << std::endl;
+        // std::cout << "free_fwds" << std::endl;
         // free input and output tensors
         free_fwds(frame_info.forwards);
         frame_info.forwards.clear();
 
-        std::cout << "m_pfnDetectFinish" << std::endl;
+        // std::cout << "m_pfnDetectFinish" << std::endl;
         if (m_pfnDetectFinish != nullptr) {
             m_pfnDetectFinish(frame_info);
         }
 
-        std::cout << "m_nextInferPipe" << std::endl;
+        // std::cout << "m_nextInferPipe" << std::endl;
         if (m_nextInferPipe) {
-            std::cout << "m_nextInferPipe push_frame" << std::endl;
+            // std::cout << "m_nextInferPipe push_frame" << std::endl;
             m_nextInferPipe->push_frame(&frame_info);
         }
 
-        std::cout << "m_nextInferPipe 111" << std::endl;
+        // std::cout << "m_nextInferPipe 111" << std::endl;
         if (m_isLastDetector) {
-            std::cout << "m_isLastDetector this->detectorName" << std::endl;
-            std::cout << "=============================================" << std::endl;
-            std::cout << this->detectorName << std::endl;
+            // std::cout << "m_isLastDetector this->detectorName" << std::endl;
+            // std::cout << "=============================================" << std::endl;
+            // std::cout << this->detectorName << std::endl;
             for (int j = 0; j < frame_info.frames.size(); ++j) {
                 auto reff = frame_info.frames[j];
                 assert(reff.avpkt != nullptr);
@@ -234,6 +326,9 @@ int YoloV5::postprocess(std::vector<bm::FrameInfo2> &frame_infos) {
         //     bm_free_device(m_bmctx->handle(), tensor.device_mem);
         // }
     }
+    free(json);
+    free(listJson);
+    free(redis_buf);
 }
 
 float YoloV5::sigmoid(float x) {

@@ -7,6 +7,7 @@
 #include "opencv2/opencv.hpp"
 #include <sys/time.h>
 #include "face_common.h"
+#include "hiredis/hiredis.h"
 
 /*
 struct FrameBaseInfo {
@@ -44,7 +45,12 @@ class YoloV5 : public bm::DetectorDelegate<bm::FrameInfo2> {
     float m_nmsThreshold = 0.5;
     float m_objThreshold = 0.5;
     std::vector<std::string> m_class_names;
-    int m_class_num = 1; // default is coco names
+    std::vector<std::string> person_class_names{
+        "person", "smoke", "fire"};
+    std::vector<std::string> phone_class_names{
+        "phone", "smoking", "extinguisher"};
+
+    int m_class_num = 3; // default is coco names
     // const float m_anchors[3][6] = {{10.0, 13.0, 16.0, 30.0, 33.0, 23.0},
     // {30.0, 61.0, 62.0, 45.0, 59.0, 119.0},{116.0, 90.0, 156.0, 198.0, 373.0,
     // 326.0}};
@@ -63,7 +69,15 @@ public:
     virtual int postprocess(std::vector<bm::FrameInfo2> &frame_info) override;
 
     void setLastDetector(bool isLast);
+    void setConfidence(float confidence, float obj_threshold, float nms_threshold) {
+        m_confThreshold = confidence;
+        m_nmsThreshold = nms_threshold;
+        m_objThreshold = obj_threshold;
+    }
+
     std::string detectorName;
+    std::string channelId;
+    std::string redisTopic;
 
 private:
     float sigmoid(float x);
@@ -74,4 +88,14 @@ private:
     void free_fwds(std::vector<bm::NetForward> &ios);
 
     void extract_yolobox_cpu(bm::FrameInfo2 &frameInfo);
+
+    std::string get_label(int class_id) {
+        std::string label_name = "";
+        if (detectorName == "person") {
+            label_name = person_class_names[class_id];
+        } else if (detectorName == "phone") {
+            label_name = phone_class_names[class_id];
+        }
+        return label_name;
+    }
 };
