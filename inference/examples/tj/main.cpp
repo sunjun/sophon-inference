@@ -9,7 +9,10 @@
 #include <iomanip>
 #include <map>
 #include "hiredis/hiredis.h"
+#include <pthread.h>
+
 redisContext *global_redis = nullptr;
+pthread_mutex_t global_redis_mutx;
 
 int main(int argc, char *argv[]) {
     const char *keys = "{help | 0 | Print help info}"
@@ -35,6 +38,9 @@ int main(int argc, char *argv[]) {
         return 0;
     }
     std::cout << "redisConnect global_redis " << &global_redis << std::endl;
+
+    pthread_mutex_init(&global_redis_mutx, NULL);
+
     /* PUBLISH a key */
     // redisReply *reply = (redisReply *)redisCommand(global_redis, "PUBLISH %s %s", "mychannel", "h3333 world", 3);
     // printf("PUBLISH: %s\n", reply->str);

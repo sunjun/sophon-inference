@@ -3,11 +3,13 @@
 //
 
 #include "yolov5s.h"
+#include <pthread.h>
 #include "hiredis/hiredis.h"
 
 int MAX_REDIS_LEN = 1024 * 1024 * 10;
 int MAX_JSON_LEN = 1024 * 10;
 extern redisContext *global_redis;
+extern pthread_mutex_t global_redis_mutx;
 
 YoloV5::YoloV5(bm::BMNNContextPtr bmctx, int max_batch) :
     m_bmctx(bmctx), MAX_BATCH(max_batch) {
@@ -217,8 +219,8 @@ int YoloV5::postprocess(std::vector<bm::FrameInfo2> &frame_infos) {
             int64_t curentTimeMs = tv.tv_sec * 1000 + tv.tv_usec / 1000;
 
             std::cout << "frame.avframe " << i << std::endl;
-            std::cout << "frame.avframe format " << frame.avframe->format << std::endl;
-            std::cout << "frame.avframe format " << AV_PIX_FMT_NV12 << std::endl;
+            // std::cout << "frame.avframe format " << frame.avframe->format << std::endl;
+            // std::cout << "frame.avframe format " << AV_PIX_FMT_NV12 << std::endl;
             int32_t yuvSize = 0;
             int32_t ySize = 0;
             int32_t uSize = 0;
@@ -250,25 +252,28 @@ int YoloV5::postprocess(std::vector<bm::FrameInfo2> &frame_infos) {
                 memcpy(redis_buf + sizeInt + jsonLen, frame.avframe->data[0], ySize * height);
                 // copy uv data
                 memcpy(redis_buf + sizeInt + jsonLen + ySize * height, frame.avframe->data[1], uvSize * height / 2);
+
+                pthread_mutex_lock(&global_redis_mutx);
                 redisReply *reply = (redisReply *)redisCommand(global_redis, "PUBLISH %s %b ", redisTopic.data(), redis_buf, sizeInt + jsonLen + yuvSize);
                 printf("redis send %d %s %d\n", reply->type, reply->str, reply->integer);
                 freeReplyObject(reply);
-                char name[100] = "";
-                sprintf(name, "%ld_bgr.wb", curentTimeMs);
-                FILE *fd = fopen(name, "wb");
+                pthread_mutex_unlock(&global_redis_mutx);
+                // char name[100] = "";
+                // sprintf(name, "%ld_bgr.png", curentTimeMs);
+                // FILE *fd = fopen(name, "wb");
 
-                if (fd == NULL) {
-                    perror("open failed!");
-                    exit(1);
-                }
+                // if (fd == NULL) {
+                //     perror("open failed!");
+                //     exit(1);
+                // }
 
-                fwrite(redis_buf + sizeInt + jsonLen, yuvSize, 1, fd);
-                fclose(fd);
+                // fwrite(redis_buf + sizeInt + jsonLen, yuvSize, 1, fd);
+                // fclose(fd);
 
                 // cv::Mat BGR;
                 // cv::Mat NV12 = cv::Mat(height * 3 / 2, width, CV_8UC1, redis_buf + sizeInt + jsonLen);
 
-                // cv::cvtColor(NV12, BGR, 99);
+                // cv::cvtColor(NV12, BGR, 91);
                 // cv::imwrite(name, BGR);
 
                 // std::cout << "this->detectorName redis topic " << redisTopic << std::endl;

@@ -253,7 +253,7 @@ void OneCardInferApp::start(const std::string url, Config &config) {
         std::string media_file;
         AVDictionary *opts = NULL;
         av_dict_set_int(&opts, "sophon_idx", m_dev_id, 0);
-        av_dict_set(&opts, "output_format", "101", 18);
+        // av_dict_set(&opts, "output_format", "101", 18);
 
         pchan->decoder->set_avformat_opend_callback([this, pchan](AVFormatContext *ifmt) {
             if (pchan->outputer) {
