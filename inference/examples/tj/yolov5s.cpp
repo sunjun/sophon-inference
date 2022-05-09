@@ -230,8 +230,8 @@ int YoloV5::postprocess(std::vector<bm::FrameInfo2> &frame_infos) {
                     sprintf(listJson, "%s,", listJson);
                 }
             }
-            sprintf(listJson, "%s]}", listJson);
         }
+        sprintf(listJson, "%s]}", listJson);
 
         for (int i = 0; i < frame_info.frames.size(); i++) {
             bm::FrameBaseInfo2 frame = frame_info.frames[i];
