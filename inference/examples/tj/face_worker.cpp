@@ -91,6 +91,7 @@ void OneCardInferApp::start(const std::vector<std::string> &urls, Config &config
         param.inference_queue_size = 8;
         param.postprocess_thread_num = 1;
         param.postprocess_queue_size = 5;
+        param.batch_size = 1;
         loadConfig(param, config);
 
 #endif
@@ -235,6 +236,7 @@ void OneCardInferApp::start(const std::string url, Config &config) {
         param.inference_queue_size = 8;
         param.postprocess_thread_num = 1;
         param.postprocess_queue_size = 5;
+        param.batch_size = 1;
         loadConfig(param, config);
 
 #endif
