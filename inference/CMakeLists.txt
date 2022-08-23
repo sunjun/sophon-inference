@@ -3,7 +3,7 @@ project(inference_framework)
 
 set(CMAKE_CXX_STANDARD 14)
 
-option(HAVE_TRACKER "Enable tracker" ON)
+option(HAVE_TRACKER "Enable tracker" OFF)
 option(USE_BM_FFMPEG "Use bm ffmpeg" ON)
 option(USE_BM_OPENCV "Use bm opencv" ON)
 option(USE_QTGUI "Whether has GUI support" OFF)
@@ -37,6 +37,8 @@ if (DEFINED ENV{REL_TOP})
 else()
     set(BMNNSDK2_TOP $ENV{HOME}/bmnnsdk2/bmnnsdk2-latest)
 endif()
+
+set(BMNNSDK2_TOP /workspace)
 
 set(bmnnsdk_inc_dirs ${BMNNSDK2_TOP}/include
         ${BMNNSDK2_TOP}/include/bmruntime
@@ -111,7 +113,7 @@ if (USE_QTGUI)
     add_subdirectory(bmgui-lite)
 endif()
 add_subdirectory(third_party/jsoncpp)
-add_subdirectory(third_party/live555)
+#add_subdirectory(third_party/live555)
 
 if (USE_BM_FFMPEG)
    add_subdirectory(examples)

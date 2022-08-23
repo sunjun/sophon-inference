@@ -49,6 +49,10 @@ class YoloV5 : public bm::DetectorDelegate<bm::FrameInfo2> {
         "person", "smoke", "fire"};
     std::vector<std::string> phone_class_names{
         "phone", "smoking", "extinguisher"};
+    std::vector<std::string> yqhz10701_class_names{
+        "person", "nohelmet", "fire", "smoke", "helmet"};
+    std::vector<std::string> yqhz10702_class_names{
+        "phone", "smoking", "sleep", "upclothes", "lowerclothes"};
 
     int m_class_num = 3; // default is coco names
     // const float m_anchors[3][6] = {{10.0, 13.0, 16.0, 30.0, 33.0, 23.0},
@@ -95,6 +99,10 @@ private:
             label_name = person_class_names[class_id];
         } else if (detectorName == "phone") {
             label_name = phone_class_names[class_id];
+        } else if (detectorName == "yqhz10701") {
+            label_name = yqhz10701_class_names[class_id];
+        } else if (detectorName == "yqhz10702") {
+            label_name = yqhz10702_class_names[class_id];
         }
         return label_name;
     }
